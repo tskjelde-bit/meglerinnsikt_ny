@@ -231,7 +231,11 @@ function KartMap() {
           onClick={onClick}
           onMouseMove={onHover}
           onMouseLeave={() => setHoveredDistrict(null)}
-          onLoad={() => setIsLoaded(true)}
+          onLoad={() => {
+            setIsLoaded(true);
+            // Fix: force resize so tiles render without needing a click
+            setTimeout(() => mapRef.current?.resize(), 0);
+          }}
           interactiveLayerIds={['kart-bydel-polygons']}
           cursor={hoveredDistrict ? 'pointer' : 'auto'}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
