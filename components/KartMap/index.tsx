@@ -234,7 +234,12 @@ function KartMap() {
           onLoad={() => {
             setIsLoaded(true);
             // Fix: force resize so tiles render without needing a click
-            setTimeout(() => mapRef.current?.resize(), 0);
+            const map = mapRef.current;
+            if (map) {
+              map.resize();
+              setTimeout(() => map.resize(), 100);
+              setTimeout(() => map.resize(), 500);
+            }
           }}
           interactiveLayerIds={['kart-bydel-polygons']}
           cursor={hoveredDistrict ? 'pointer' : 'auto'}
