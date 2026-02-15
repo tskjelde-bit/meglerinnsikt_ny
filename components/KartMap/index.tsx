@@ -149,8 +149,10 @@ function KartMap() {
   const [labelFeatures, setLabelFeatures] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [formRole, setFormRole] = useState<string | null>(null);
   const [formSize, setFormSize] = useState(70);
+  const [boligtype, setBoligtype] = useState('');
+  const [calcStep, setCalcStep] = useState<'input' | 'result' | 'contact'>('input');
+  const [contactForm, setContactForm] = useState({ navn: '', epost: '', telefon: '' });
 
   useEffect(() => {
     fetch(prefixPath('/oslo_label_points.geojson?v=2'))
@@ -196,8 +198,17 @@ function KartMap() {
     }
   }, [setSelectedDistrict]);
 
-  const openModal = useCallback(() => setModalOpen(true), []);
-  const closeModal = useCallback(() => setModalOpen(false), []);
+  const openModal = useCallback(() => { setCalcStep('input'); setModalOpen(true); }, []);
+  const closeModal = useCallback(() => { setModalOpen(false); setCalcStep('input'); }, []);
+
+  const justeringsfaktor: Record<string, number> = { leilighet: 1.0, rekkehus: 0.92, tomannsbolig: 0.88, enebolig: 0.85 };
+  const boligtypeLabel: Record<string, string> = { leilighet: 'Leilighet', rekkehus: 'Rekkehus', tomannsbolig: 'Tomannsbolig', enebolig: 'Enebolig' };
+
+  const estimertVerdi = currentData && boligtype
+    ? Math.round(currentData.sqmPrice * formSize * (justeringsfaktor[boligtype] || 1))
+    : 0;
+
+  const fmtKr = (v: number) => v.toLocaleString('nb-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
 
   const currentData = selectedDistrict ? districtData[selectedDistrict] : null;
   const displayData = currentData || osloDefault;
@@ -327,7 +338,7 @@ function KartMap() {
           <p className={classes.statusLine}>{displayData.statusText}</p>
           {currentData && (
             <button className={classes.ctaButton} onClick={openModal}>
-              Hva betyr dette for min bolig?
+              Hva er boligen din verdt?
             </button>
           )}
         </div>
@@ -338,9 +349,13 @@ function KartMap() {
         <div className={classes.modal} onClick={(e) => e.stopPropagation()}>
           <div className={classes.modalHeader}>
             <div>
-              <h2 className={classes.modalTitle}>Hva betyr dette for min bolig?</h2>
+              <h2 className={classes.modalTitle}>
+                {calcStep === 'contact' ? 'Få en presis verdivurdering' : 'Hva er boligen din verdt?'}
+              </h2>
               <p className={classes.modalSubtitle}>
-                Basert på dagens marked i {selectedDistrict || '...'}
+                {calcStep === 'contact'
+                  ? 'Fyll inn kontaktinfo så tar vi kontakt'
+                  : `Basert på dagens marked i ${selectedDistrict || '...'}`}
               </p>
             </div>
             <button className={classes.modalClose} onClick={closeModal} aria-label="Lukk">
@@ -350,44 +365,99 @@ function KartMap() {
             </button>
           </div>
           <div className={classes.modalBody}>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>Boligtype</label>
-              <select className={classes.formSelect} defaultValue="">
-                <option value="" disabled>Velg boligtype</option>
-                <option value="leilighet">Leilighet</option>
-                <option value="rekkehus">Rekkehus</option>
-                <option value="enebolig">Enebolig</option>
-                <option value="tomannsbolig">Tomannsbolig</option>
-              </select>
-            </div>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>Ca. størrelse</label>
-              <div className={classes.rangeGroup}>
-                <input type="range" className={classes.formRange} min={20} max={250} step={5} value={formSize} onChange={(e) => setFormSize(Number(e.target.value))} />
-                <span className={classes.rangeValue}>{formSize} m²</span>
-              </div>
-            </div>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>Jeg er</label>
-              <div className={classes.roleSelector}>
-                {['Selger', 'Kjøper', 'Begge'].map((role) => (
-                  <button key={role} type="button" className={`${classes.roleOption} ${formRole === role ? classes.selected : ''}`} onClick={() => setFormRole(role)}>{role}</button>
-                ))}
-              </div>
-            </div>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>Navn</label>
-              <input type="text" className={classes.formInput} placeholder="Ditt navn" />
-            </div>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>E-post</label>
-              <input type="email" className={classes.formInput} placeholder="din@epost.no" />
-            </div>
-            <div className={classes.formGroup}>
-              <label className={classes.formLabel}>Telefon</label>
-              <input type="tel" className={classes.formInput} placeholder="000 00 000" />
-            </div>
-            <button type="button" className={classes.formSubmit}>Send forespørsel</button>
+            {calcStep === 'input' && (
+              <>
+                <div className={classes.formGroup}>
+                  <label className={classes.formLabel}>Boligtype</label>
+                  <select className={classes.formSelect} value={boligtype} onChange={(e) => setBoligtype(e.target.value)}>
+                    <option value="" disabled>Velg boligtype</option>
+                    <option value="leilighet">Leilighet</option>
+                    <option value="rekkehus">Rekkehus</option>
+                    <option value="enebolig">Enebolig</option>
+                    <option value="tomannsbolig">Tomannsbolig</option>
+                  </select>
+                </div>
+                <div className={classes.formGroup}>
+                  <label className={classes.formLabel}>Størrelse</label>
+                  <div className={classes.rangeGroup}>
+                    <input type="range" className={classes.formRange} min={20} max={250} step={5} value={formSize} onChange={(e) => setFormSize(Number(e.target.value))} />
+                    <span className={classes.rangeValue}>{formSize} m²</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={classes.formSubmit}
+                  disabled={!boligtype}
+                  onClick={() => setCalcStep('result')}
+                >
+                  Beregn estimert verdi
+                </button>
+              </>
+            )}
+
+            {calcStep === 'result' && currentData && (
+              <>
+                <div className={classes.resultCard}>
+                  <div className={classes.resultLabel}>Estimert verdi</div>
+                  <div className={classes.resultValue}>{fmtKr(estimertVerdi)}</div>
+                  <div className={classes.resultMeta}>
+                    {boligtypeLabel[boligtype]} · {formSize} m² · {selectedDistrict}
+                  </div>
+                </div>
+                <div className={classes.resultStats}>
+                  <div className={classes.resultStat}>
+                    <span className={classes.resultStatValue}>
+                      {currentData.priceChange > 0 ? '+' : ''}{currentData.priceChange.toFixed(1)}%
+                    </span>
+                    <span className={classes.resultStatLabel}>Prisendring i år</span>
+                  </div>
+                  <div className={classes.resultStat}>
+                    <span className={classes.resultStatValue}>{fmtSqm(currentData.sqmPrice)}</span>
+                    <span className={classes.resultStatLabel}>Kr/m²</span>
+                  </div>
+                </div>
+                <p className={classes.resultComment}>{currentData.statusText}</p>
+                <button
+                  type="button"
+                  className={classes.formSubmit}
+                  onClick={() => setCalcStep('contact')}
+                >
+                  Få en presis verdivurdering
+                </button>
+                <button
+                  type="button"
+                  className={classes.resultBack}
+                  onClick={() => setCalcStep('input')}
+                >
+                  ← Endre forutsetninger
+                </button>
+              </>
+            )}
+
+            {calcStep === 'contact' && (
+              <>
+                <div className={classes.formGroup}>
+                  <label className={classes.formLabel}>Navn</label>
+                  <input type="text" className={classes.formInput} placeholder="Ditt navn" value={contactForm.navn} onChange={(e) => setContactForm(f => ({ ...f, navn: e.target.value }))} />
+                </div>
+                <div className={classes.formGroup}>
+                  <label className={classes.formLabel}>E-post</label>
+                  <input type="email" className={classes.formInput} placeholder="din@epost.no" value={contactForm.epost} onChange={(e) => setContactForm(f => ({ ...f, epost: e.target.value }))} />
+                </div>
+                <div className={classes.formGroup}>
+                  <label className={classes.formLabel}>Telefon</label>
+                  <input type="tel" className={classes.formInput} placeholder="000 00 000" value={contactForm.telefon} onChange={(e) => setContactForm(f => ({ ...f, telefon: e.target.value }))} />
+                </div>
+                <button type="button" className={classes.formSubmit}>Send forespørsel</button>
+                <button
+                  type="button"
+                  className={classes.resultBack}
+                  onClick={() => setCalcStep('result')}
+                >
+                  ← Tilbake til estimat
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
