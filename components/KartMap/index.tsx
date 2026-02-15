@@ -344,6 +344,38 @@ function KartMap() {
         </div>
       </div>
 
+      {/* Mobile bottom panel */}
+      <div className={`${classes.mobilePanel} ${currentData ? classes.mobilePanelExpanded : ''}`}>
+        {!currentData ? (
+          <p className={classes.mobilePanelHint}>Klikk på en bydel for innsikt</p>
+        ) : (
+          <>
+            <button className={classes.mobilePanelClose} onClick={() => setSelectedDistrict(null)} aria-label="Lukk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+            <h2 className={classes.mobilePanelTitle}>{selectedDistrict}</h2>
+            <div className={classes.mobilePanelStats}>
+              <div className={classes.mobilePanelStat}>
+                <div className={classes.mobilePanelStatValue}>{currentData.priceChange > 0 ? '+' : ''}{currentData.priceChange.toFixed(1)}%</div>
+                <div className={classes.mobilePanelStatLabel}>Prisendring</div>
+              </div>
+              <div className={classes.mobilePanelStat}>
+                <div className={classes.mobilePanelStatValue}>{currentData.turnoverDays}</div>
+                <div className={classes.mobilePanelStatLabel}>Dager omsetn.</div>
+              </div>
+              <div className={classes.mobilePanelStat}>
+                <div className={classes.mobilePanelStatValue}>{fmtSqm(currentData.sqmPrice)}</div>
+                <div className={classes.mobilePanelStatLabel}>Kr/m²</div>
+              </div>
+            </div>
+            <p className={classes.mobilePanelStatus}>{currentData.statusText}</p>
+            <button className={classes.ctaButton} onClick={openModal} style={{ alignSelf: 'stretch', textAlign: 'center' }}>
+              Hva er boligen din verdt?
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Form Modal */}
       <div className={`${classes.modalOverlay} ${modalOpen ? classes.open : ''}`} onClick={closeModal}>
         <div className={classes.modal} onClick={(e) => e.stopPropagation()}>
