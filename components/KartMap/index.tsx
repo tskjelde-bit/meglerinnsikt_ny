@@ -201,6 +201,8 @@ function KartMap() {
   const openModal = useCallback(() => { setCalcStep('input'); setModalOpen(true); }, []);
   const closeModal = useCallback(() => { setModalOpen(false); setCalcStep('input'); }, []);
 
+  const currentData = selectedDistrict ? districtData[selectedDistrict] : null;
+
   const justeringsfaktor: Record<string, number> = { leilighet: 1.0, rekkehus: 0.92, tomannsbolig: 0.88, enebolig: 0.85 };
   const boligtypeLabel: Record<string, string> = { leilighet: 'Leilighet', rekkehus: 'Rekkehus', tomannsbolig: 'Tomannsbolig', enebolig: 'Enebolig' };
 
@@ -209,8 +211,6 @@ function KartMap() {
     : 0;
 
   const fmtKr = (v: number) => v.toLocaleString('nb-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
-
-  const currentData = selectedDistrict ? districtData[selectedDistrict] : null;
   const displayData = currentData || osloDefault;
   const displayName = selectedDistrict || 'Oslo';
 
